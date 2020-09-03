@@ -125,6 +125,7 @@ export default {
       totalPage: 1, // 总共页数，默认为1
       currentPage: 1, //当前页数 ，默认为1
       pageSize: 10, // 每页显示数量
+      downloadLoading:false
     }
   },
   mounted() {
@@ -182,17 +183,19 @@ export default {
     },
     //导出Excel
     exportExcel(){
-      this.orderData.forEach(item=>{
-        item.tel='\t'+item.tel
-        item.orderNum='\t'+item.orderNum
-        item.waybillNum='\t'+item.waybillNum
-        item.date='\t'+item.date
+      this.downloadLoading = true;
+      require.ensure([], () => {
+        const {export_json_to_excel} = require('../excel/Export2Excel') //这个地址和页面的位置相关，这个地址是Export2Excel.js相对于页面的相对位置
+        const tHeader = this.orderTitle.map(item=>item.title); //这个是表头名称 可以是iveiw表格中表头属性的title的数组
+        const filterVal = this.orderTitle.map(item=>item.key); //与表格数据配合 可以是iview表格中的key的数组
+        const list = this.orderData//表格数据，iview中表单数据也是这种格式！
+        const data = this.formatJson(filterVal, list)
+        export_json_to_excel(tHeader, data, '订单列表') //列表excel  这个是导出表单的名称
+        this.downloadLoading = false
       })
-      this.$refs.table.exportCsv({
-        filename: '订单列表',
-        columns:this.orderTitle,
-        data: this.orderData
-      })
+    },
+    formatJson(filterVal, jsonData) {
+      return jsonData.map(v => filterVal.map(j => v[j]))
     }
   }
 }

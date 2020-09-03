@@ -5,6 +5,8 @@ import App from './App'
 import router from './router'
 import 'view-design/dist/styles/iview.css';
 import ViewUI from "view-design";
+import Blob from "@/excel/Blob.js"
+import ExportExcel from "@/excel/Export2Excel.js"
 Vue.config.productionTip = false
 Vue.use(ViewUI);
 /* eslint-disable no-new */

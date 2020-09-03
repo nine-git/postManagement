@@ -13,13 +13,13 @@
                   style="width: 1.2rem;height: 0.32rem;display: block;">
             <Option v-for="item in searchNameOption" :value="item.value" :key="item.value">{{ item.label }}</Option>
           </Select>
-          <Input suffix="ios-search" placeholder="请输入搜索关键字" style="width: auto;" />
+          <Input suffix="ios-search" placeholder="请输入搜索关键字" style="width: auto;" v-model="searchValue" search @on-search="search"/>
         </div>
-        <div class="export" @click="exportExcal()">全部导出</div>
+        <div class="export" @click="exportExcel()"><Icon type="ios-download-outline"></Icon><div>全部导出</div></div>
       </div>
       <div class="formMain">
-        <Table :columns="orderTitle" :data="orderData" border></Table>
-        <Page :total="100" show-sizer show-elevator />
+        <Table :columns="orderTitle" :data="currentPageData" border no-data-text="当前没有数据..." ref="table"></Table>
+        <Page :total="orderData.length" show-sizer show-elevator :current="1" @on-change="changePage"/>
       </div>
     </div>
   </div>
@@ -30,7 +30,8 @@ export default {
   name: "OrderForm",
   data(){
     return{
-      searchName:'',
+      searchName:'流程编号',//搜索字段
+      searchValue:'',//搜索值
       searchNameOption:[
         {
           value: '流程编号',
@@ -56,7 +57,7 @@ export default {
           value: '运单号',
           label: '运单号'
         },
-      ],
+      ],//下拉框的值
       orderTitle: [
         {
           title: '流程编号',
@@ -114,97 +115,84 @@ export default {
         },
         {
           title: '生成时间',
-          key: 'data',
+          key: 'date',
           resizable: true,
           width: 156
         }
-      ],
-      orderData: [
-        {
-          flowId: '124320200818113614000001',
-          flowName: '非因工在职死亡一次性待遇支付',
-          initiator: '海媛',
-          recipients: '司马伟冰',
-          tel:'15602784487',
-          address: '四川省成都市武侯区丰德国际广场A3座15楼',
-          orderNum:'1292658203538182145',
-          waybillNum:'1194662177925',
-          otherStatus:'已支付',
-          data:'2015-05-02 02:00:00'
-        },
-        {
-          flowId: '124320200818113614000001',
-          flowName: '非因工在职死亡一次性待遇支付',
-          initiator: '海媛',
-          recipients: '司马伟冰',
-          tel:'15602784487',
-          address: '四川省成都市武侯区丰德国际广场A3座15楼',
-          orderNum:'1292658203538182145',
-          waybillNum:'1194662177925',
-          otherStatus:'已支付',
-          data:'2015-05-02 02:00:00'
-        },
-        {
-          flowId: '124320200818113614000001',
-          flowName: '非因工在职死亡一次性待遇支付',
-          initiator: '海媛',
-          recipients: '司马伟冰',
-          tel:'15602784487',
-          address: '四川省成都市武侯区丰德国际广场A3座15楼',
-          orderNum:'1292658203538182145',
-          waybillNum:'1194662177925',
-          otherStatus:'已支付',
-          data:'2015-05-02 02:00:00'
-        },
-        {
-          flowId: '124320200818113614000001',
-          flowName: '非因工在职死亡一次性待遇支付',
-          initiator: '海媛',
-          recipients: '司马伟冰',
-          tel:'15602784487',
-          address: '四川省成都市武侯区丰德国际广场A3座15楼',
-          orderNum:'1292658203538182145',
-          waybillNum:'1194662177925',
-          otherStatus:'已支付',
-          data:'2015-05-02 02:00:00'
-        },
-        {
-          flowId: '124320200818113614000001',
-          flowName: '非因工在职死亡一次性待遇支付',
-          initiator: '海媛',
-          recipients: '司马伟冰',
-          tel:'15602784487',
-          address: '四川省成都市武侯区丰德国际广场A3座15楼',
-          orderNum:'1292658203538182145',
-          waybillNum:'1194662177925',
-          otherStatus:'已支付',
-          data:'2015-05-02 02:00:00'
-        },
-        {
-          flowId: '124320200818113614000001',
-          flowName: '非因工在职死亡一次性待遇支付',
-          initiator: '海媛',
-          recipients: '司马伟冰',
-          tel:'15602784487',
-          address: '四川省成都市武侯区丰德国际广场A3座15楼',
-          orderNum:'1292658203538182145',
-          waybillNum:'1194662177925',
-          otherStatus:'已支付',
-          data:'2015-05-02 02:00:00'
-        },
-      ]
+      ],//表单表头
+      orderData: [],//表单所有的数据
+      currentPageData:[],//表单当前页的数据
+      totalPage: 1, // 总共页数，默认为1
+      currentPage: 1, //当前页数 ，默认为1
+      pageSize: 10, // 每页显示数量
     }
   },
   mounted() {
     window.document.title='订单列表'
+    //获取数据
+    this.orderData=this.createData()
+    this.changePage(this.currentPage);
+    // 计算一共有几页
+    this.totalPage = Math.ceil(this.orderData.length / this.pageSize);
+    // 计算得0时设置为1
+    this.totalPage = this.totalPage === 0 ? 1 : this.totalPage;
+
   },
   methods:{
+    //搜索
+    search(){
+      let searchTitle=this.orderTitle.filter(item=>item.title===this.searchName)[0].key
+      this.orderData=this.createData()//请求所有数据
+      if (this.searchValue){
+        this.orderData=this.orderData.filter(item=> item[searchTitle] == this.searchValue)
+      }
+      this.changePage(1);
+    },
+    //创建数据
+    createData () {
+      let data = [];
+      for (let i = 0; i < 96; i++) {
+        data.push({
+          // flowId: '124320200818113614000001',
+          flowId:i+1,
+          flowName: '非因工在职死亡一次性待遇支付',
+          initiator: '海媛',
+          recipients: '司马伟冰',
+          tel:'15602784487',
+          address: '四川省成都市武侯区丰德国际广场A3座15楼',
+          orderNum:'1292658203538182145',
+          waybillNum:'1194662177925',
+          otherStatus:'已支付',
+          date:'2015-05-02 02:00:00'
+        })
+      }
+      return data;
+    },
+    //分页
+    changePage(index){
+      this.currentPage=index
+      let begin = (index - 1) * this.pageSize;
+      let end = index * this.pageSize;
+      this.currentPageData = this.orderData.slice(begin, end);
+    },
+    //退出登录
     logout(){
       sessionStorage.removeItem('userName')
       this.$router.push({path:'/login'})
     },
-    exportExcal(){
-      console.log('我要导出表格了')
+    //导出Excel
+    exportExcel(){
+      this.orderData.forEach(item=>{
+        item.tel='\t'+item.tel
+        item.orderNum='\t'+item.orderNum
+        item.waybillNum='\t'+item.waybillNum
+        item.date='\t'+item.date
+      })
+      this.$refs.table.exportCsv({
+        filename: '订单列表',
+        columns:this.orderTitle,
+        data: this.orderData
+      })
     }
   }
 }
@@ -256,6 +244,10 @@ export default {
   display: flex;
   justify-content: center;
 }
+/deep/ .ivu-icon-ios-download-outline:before{
+  color: rgba(0,0,0,0.65);;
+  margin: 0 0.08rem 0 0.1389rem;
+}
 .orderForm{
   .header{
     width: 100%;
@@ -297,6 +289,12 @@ export default {
         font-size: 0.14rem;
         color: rgba(0,0,0,0.65);
         line-height: 0.32rem;
+        display: flex;
+        align-items: center;
+        background: #FFFFFF;
+        border: 1px solid rgba(0,0,0,0.15);
+        border-radius: 0.02rem;
+        cursor: pointer;
       }
     }
     .formMain{
